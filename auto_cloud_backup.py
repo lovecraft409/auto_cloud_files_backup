@@ -17,7 +17,9 @@ b2_api = B2Api(info)
 b2_api.authorize_account("production", application_key_id, application_key)
 bucket = b2_api.get_bucket_by_name("auto-backup-2026")
 home = os.path.expanduser("~")
-watch_path = os.path.join(home, "Documents")
+folders = os.getenv("WATCH_FOLDERS", "Documents").split(",")
+min_size_kb = int(os.getenv("MIN_FILE_SIZE_KB", 1))
+min_size_bytes = min_size_kb * 1024
 
 print("Connected to Backblaze.")
 
@@ -33,6 +35,12 @@ class MyHandler(FileSystemEventHandler):
                 print(f"Skipping temp file: {file_name}")
                 return
 
+            file_size = os.path.getsize(file_path)
+
+            if file_size < min_size_bytes:
+                print(f"Skipping {file_name}: too small ({file_size} bytes, minimum is {min_size_kb} KB)")
+                return
+
             print(f"New file detected: {file_path}")
             try:
                 bucket.upload_local_file(local_file=file_path, file_name=file_name)
@@ -41,7 +49,10 @@ class MyHandler(FileSystemEventHandler):
                 print(f"Upload failed: {e}")
 
 observer = Observer()
-observer.schedule(MyHandler(), path=watch_path, recursive=True)
+for folder in folders:
+    folder_path = os.path.join(home, folder.strip())
+    observer.schedule(MyHandler(), path=folder_path, recursive=True)
+    print(f"Watching: {folder_path}")
 observer.start()
 
 print("Watching Documents folder... press Ctrl+C to stop")
