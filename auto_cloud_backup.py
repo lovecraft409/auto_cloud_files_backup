@@ -4,6 +4,7 @@ from b2sdk.v2 import InMemoryAccountInfo, B2Api
 from dotenv import load_dotenv
 import os
 import time
+import sys
 
 load_dotenv()
 
